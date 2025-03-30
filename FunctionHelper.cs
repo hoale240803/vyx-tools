@@ -9,75 +9,14 @@ namespace GenerateImageName
 {
     public static class FunctionHelper
     {
-        public static void GenerateImageNameV2()
-        {
-            string sourceRoot = @"C:\Users\hoa.le\Downloads\Vyxproject";  // Set your root folder path
-            string destinationRoot = @"C:\Users\hoa.le\Downloads\NewVyxproject";  // New folder to move renamed images
-
-            if (!Directory.Exists(sourceRoot))
-            {
-                Console.WriteLine("❌ Source folder not found!");
-                return;
-            }
-
-            Directory.CreateDirectory(destinationRoot); // Ensure the destination root exists
-
-            // Scan all subfolders (modules and types)
-            var allModules = Directory.GetDirectories(sourceRoot);
-            foreach (var modulePath in Directory.GetDirectories(sourceRoot))
-            {
-                string moduleName = Path.GetFileName(modulePath); // Extract module name
-
-                foreach (var typePath in Directory.GetDirectories(modulePath))
-                {
-                    string typeName = Path.GetFileName(typePath); // Extract type name
-                    string newTypeFolder = Path.Combine(destinationRoot, moduleName, typeName);
-                    Directory.CreateDirectory(newTypeFolder); // Ensure destination subfolder exists
-
-                    var imageFiles = Directory.GetFiles(typePath, "*.*")
-                                              .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                                                          f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
-                                                          f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
-                                                          f.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
-                                              .ToList();
-
-                    if (imageFiles.Count <= 0)
-                        continue;
-
-                    imageFiles.Sort(); // Sort images for consistent naming
-
-                    int index = 1;
-                    foreach (var filePath in imageFiles)
-                    {
-                        string fileExtension = Path.GetExtension(filePath);
-                        string newFileName = $"{moduleName}_{typeName}_{index:D3}{fileExtension}";
-                        string newFilePath = Path.Combine(newTypeFolder, newFileName);
-
-                        try
-                        {
-                            File.Copy(filePath, newFilePath); // Copy and rename the file
-                            Console.WriteLine($"✅ Moved: {Path.GetFileName(filePath)} → {newFilePath}");
-                            index++;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"❌ Error moving {filePath}: {ex.Message}");
-                        }
-                    }
-                }
-            }
-
-            Console.WriteLine("🎉 Image renaming & moving complete!");
-        }
-
         public static async Task UploadImageToS3Async()
         {
-            string localRootFolder = @"C:\Users\hoa.le\Downloads\NewVyxproject\DesignOfSuit\TheAristocrat";  // Path to renamed images
+            string localRootFolder = @"C:\Users\hoa.le\Downloads\Vyxproject\Shirt";  // Path to renamed images
             string bucketName = "xxx";  // Change to your S3 bucket name
             string awsAccessKey = "xxx";
             string awsSecretKey = "xxx";
-            RegionEndpoint bucketRegion = RegionEndpoint.USEast1;  // Change if needed
-            string excelFilePath = @"C:\Users\hoa.le\Downloads\NewVyxproject\S3_Image_Mapping.xlsx"; // Path to save Excel file
+            RegionEndpoint bucketRegion = RegionEndpoint.APSoutheast2;  // Change if needed
+            string excelFilePath = @"C:\Users\hoa.le\Downloads\NewVyxproject\S3_Shirt_Fabric_Image_Mapping.xlsx"; // Path to save Excel file
 
             if (!Directory.Exists(localRootFolder))
             {
@@ -219,7 +158,7 @@ namespace GenerateImageName
         public static void GenerateImageName()
         {
             string sourceRoot = @"C:\Users\hoa.le\Downloads\Vyxproject";  // Your root folder
-            string destinationRoot = @"C:\Users\hoa.le\Downloads\NewVyxproject";  // Destination root
+            string destinationRoot = @"C:\Users\hoa.le\Downloads\NewVyxproject1";  // Destination root
 
             if (!Directory.Exists(sourceRoot))
             {
