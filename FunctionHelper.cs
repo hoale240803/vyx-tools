@@ -9,14 +9,33 @@ namespace GenerateImageName
 {
     public static class FunctionHelper
     {
+        private static async Task CleanUpBucketAsync(IAmazonS3 s3Client, string bucketName)
+        {
+            var listResponse = await s3Client.ListObjectsV2Async(new Amazon.S3.Model.ListObjectsV2Request
+            {
+                BucketName = bucketName
+            });
+
+            if (listResponse.S3Objects.Count > 0)
+            {
+                var deleteRequest = new Amazon.S3.Model.DeleteObjectsRequest
+                {
+                    BucketName = bucketName,
+                    Objects = listResponse.S3Objects.Select(o => new Amazon.S3.Model.KeyVersion { Key = o.Key }).ToList()
+                };
+
+                await s3Client.DeleteObjectsAsync(deleteRequest);
+                Console.WriteLine("🗑️ Bucket cleaned up.");
+            }
+        }
         public static async Task UploadImageToS3Async()
         {
-            string localRootFolder = @"C:\Users\hoa.le\Downloads\Vyxproject\Shirt";  // Path to renamed images
-            string bucketName = "xxx";  // Change to your S3 bucket name
-            string awsAccessKey = "xxx";
+            string localRootFolder = @"C:\Users\hoa.le\Downloads\NewVyxproject2";  // Path to renamed images
+            string bucketName = "xx";  // Change to your S3 bucket name
+            string awsAccessKey = "xx";
             string awsSecretKey = "xxx";
             RegionEndpoint bucketRegion = RegionEndpoint.APSoutheast2;  // Change if needed
-            string excelFilePath = @"C:\Users\hoa.le\Downloads\NewVyxproject\S3_Shirt_Fabric_Image_Mapping.xlsx"; // Path to save Excel file
+            string excelFilePath = @"C:\Users\hoa.le\Downloads\NewVyxproject\S3_VyxAssets_Mapping.xlsx"; // Path to save Excel file
 
             if (!Directory.Exists(localRootFolder))
             {
@@ -30,6 +49,9 @@ namespace GenerateImageName
             // AWS S3 client setup
             var s3Client = new AmazonS3Client(awsAccessKey, awsSecretKey, bucketRegion);
             var transferUtility = new TransferUtility(s3Client);
+
+            // Clean up the bucket
+            await CleanUpBucketAsync(s3Client, bucketName);
 
             // Scan all files in subdirectories
             var imageFiles = Directory.GetFiles(localRootFolder, "*.*", SearchOption.AllDirectories)
@@ -158,7 +180,7 @@ namespace GenerateImageName
         public static void GenerateImageName()
         {
             string sourceRoot = @"C:\Users\hoa.le\Downloads\Vyxproject";  // Your root folder
-            string destinationRoot = @"C:\Users\hoa.le\Downloads\NewVyxproject1";  // Destination root
+            string destinationRoot = @"C:\Users\hoa.le\Downloads\NewVyxproject2";  // Destination root
 
             if (!Directory.Exists(sourceRoot))
             {
@@ -232,7 +254,6 @@ namespace GenerateImageName
             Console.WriteLine($"🎉 SQL file saved: {outputSqlPath}");
         }
 
-
         public static void GetStripeBalance()
         {
             // Set your secret API key
@@ -255,6 +276,64 @@ namespace GenerateImageName
             {
                 Console.WriteLine($"Stripe API Error: {e.Message}");
             }
+        }
+
+        public static void ExportProductDataToTxt(string excelFilePath, string outputTxtFilePath)
+        {
+            using (var workbook = new XLWorkbook(excelFilePath))
+            {
+                var worksheet = workbook.Worksheet("Image Mapping");
+                var rows = worksheet.RowsUsed().Skip(1); // Skip header row
+
+                using (var writer = new StreamWriter(outputTxtFilePath))
+                {
+                    foreach (var row in rows)
+                    {
+                        var folderLevel1 = row.Cell(1).GetString();
+                        var folderLevel2 = row.Cell(2).GetString();
+                        var folderLevel3 = row.Cell(3).GetString();
+                        var folderLevel4 = row.Cell(4).GetString();
+                        var fileName = row.Cell(5).GetString();
+                        var s3Url = row.Cell(6).GetString();
+
+                        string productType = GetProductType(folderLevel1);
+                        string priceType = GetPriceType(folderLevel2);
+
+                        string sql = $"INSERT INTO Product (Name, Description, S3Url, ProductType, PriceType, Code, Price, IsMain) " +
+                                     $"VALUES ('{fileName}', '', '{s3Url}', '{productType}', '{priceType}', '{fileName}', 0.00, false);";
+                        writer.WriteLine(sql);
+                    }
+                }
+            }
+
+            Console.WriteLine($"📄 Product data exported to: {outputTxtFilePath}");
+        }
+
+        private static string GetProductType(string folderName)
+        {
+            return folderName switch
+            {
+                "TrouserType" => "TrouserOnly",
+                "Lining" => "Lining",
+                "SuitType" => "SuitType",
+                "FabricOption" => "FabricOptions",
+                "DesignOfSuit" => "DesignOfSuit",
+                "Button" => "Button",
+                _ => throw new ArgumentException("Invalid folder name for ProductType")
+            };
+        }
+
+        private static string GetPriceType(string folderName)
+        {
+            return folderName switch
+            {
+                "CashmereBlend" => "SuitCahmereWool",
+                "MerinoWool" => "SuitMerinoWool",
+                "Linen200GSM" => "SuitLinen200GSM",
+                "SuperWool150" => "SuitSuperWool150",
+                "Velvette" => "SuitVelvette",
+                _ => throw new ArgumentException("Invalid folder name for PriceType")
+            };
         }
     }
 }
